@@ -9,7 +9,7 @@
 | **Semester**     | September to December 2026                                                                                                                                                                                                           |
 | **Lecturer**     | Allan Omondi                                                                                                                                                                                                                 |
 | **Contact**      | aomondi@strathmore.edu                                                                                                                                                                                                       |
-| **Note**         | The lecture contains both theory and practice.<br/>This notebook forms part of the practice.<br/>It is intended for educational purpose only.<br/>Recommended citation: [BibTex](https://raw.githubusercontent.com/course-files/DistributedDatabases-PostgreSQL/refs/heads/main/RecommendedCitation.bib) |
+| **Note**         | The lecture contains both theory and practice.<br/>The code in this repository forms part of the practice.<br/>It is intended for educational purpose only.<br/>Recommended citation: [BibTex](https://raw.githubusercontent.com/course-files/DistributedDatabases-PostgreSQL/refs/heads/main/RecommendedCitation.bib) |
 
 ## What this environment is
 

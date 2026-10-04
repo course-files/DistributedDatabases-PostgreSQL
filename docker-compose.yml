@@ -1,0 +1,92 @@
+services:
+  pg-primary:
+    image: postgres:18
+    container_name: mod2_pg_primary
+    hostname: pg-primary
+    restart: "no"
+    environment:
+      POSTGRES_DB: distributed_lab
+      POSTGRES_USER: lab_user
+      POSTGRES_PASSWORD: lab_password
+    ports:
+      - "5441:5432"
+    volumes:
+      - primary_data:/var/lib/postgresql/18/docker
+      - ./sql/primary:/docker-entrypoint-initdb.d:ro
+    networks:
+      - labnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab_user -d distributed_lab"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  pg-replica1:
+    image: postgres:18
+    container_name: mod2_pg_replica1
+    hostname: pg-replica1
+    restart: "no"
+    environment:
+      REPLICA_NAME: replica1
+    entrypoint: ["bash", "/scripts/replica-entrypoint.sh"]
+    ports:
+      - "5442:5432"
+    volumes:
+      - replica1_data:/var/lib/postgresql/18/docker
+      - ./scripts/replica-entrypoint.sh:/scripts/replica-entrypoint.sh:ro
+    depends_on:
+      pg-primary:
+        condition: service_healthy
+    networks:
+      - labnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab_user -d distributed_lab"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  pg-replica2:
+    image: postgres:18
+    container_name: mod2_pg_replica2
+    hostname: pg-replica2
+    restart: "no"
+    environment:
+      REPLICA_NAME: replica2
+    entrypoint: ["bash", "/scripts/replica-entrypoint.sh"]
+    ports:
+      - "5443:5432"
+    volumes:
+      - replica2_data:/var/lib/postgresql/18/docker
+      - ./scripts/replica-entrypoint.sh:/scripts/replica-entrypoint.sh:ro
+    # Deliberately depends on pg-replica1 being HEALTHY, not just on
+    # pg-primary. Two replicas taking a base backup from the primary at
+    # the same instant compete for the same checkpoint / WAL-recycling
+    # window, which can make the primary remove a WAL segment a backup
+    # still needs ("requested WAL segment ... has already been
+    # removed"). Waiting for replica1 to finish its own base backup
+    # first means only one base backup ever runs at a time, which
+    # removes that race entirely rather than relying on timing to be
+    # "forgiving". This is why replica2 typically finishes noticeably
+    # later than replica1 on a first start -- the delay is intentional
+    # and realistic.
+    depends_on:
+      pg-primary:
+        condition: service_healthy
+      pg-replica1:
+        condition: service_healthy
+    networks:
+      - labnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab_user -d distributed_lab"]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+
+networks:
+  labnet:
+    driver: bridge
+
+volumes:
+  primary_data:
+  replica1_data:
+  replica2_data:

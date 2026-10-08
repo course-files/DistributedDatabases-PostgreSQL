@@ -1,43 +1,43 @@
-# Module 2 Practical Laboratory
-
-# Distributed Databases: Replication, Failover, and Durability with PostgreSQL
+# Lab Manual on Distributed Databases: Replication, Failover, and Durability with PostgreSQL
 
 **Course:** Advanced Database Systems\
 **Level:** Master's\
 **Database Management System:** PostgreSQL 18 (a 3-node cluster: 1 primary + 2 replicas)\
 **Platform:** Docker\
-**Recommended duration:** 3–4 hours\
-**Mode:** Individual or pairs\
-**Prerequisite:** Module 1 (Database Transactions and Recovery)
+**Recommended duration:** 3-4 hours\
+**Mode:** Individual\
+**Prerequisite:** Module 1 (Lab on Database Transactions and Recovery)
 
 ------------------------------------------------------------------------
 
-## 1. Welcome and purpose
+## 1. Purpose of the lab
 
 Module 1 taught you how PostgreSQL behaves inside a *single* node. This
 laboratory asks the next question: what changes once there is more than
 one node, and those nodes must coordinate over a network that can be
 slow, or can simply fail?
 
-You will build and operate a real three-node PostgreSQL cluster — one
-primary and two replicas, using genuine streaming replication, not a
-simulation — and you will deliberately break it in controlled ways:
+You will build and operate a real three-node PostgreSQL cluster: one
+primary and two replicas, using streaming replication, and you will
+deliberately break it in controlled ways:
 
--   slow it down with synchronous replication;
--   starve it of the acknowledgements it needs;
--   fail it over by hand;
--   force it into split-brain;
--   crash it mid-write and see what does, and does not, survive.
+- slow it down with synchronous replication
+- starve it of the acknowledgements it needs
+- fail it over manually
+- force it into split-brain
+- crash it mid-write and see what does, and does not, survive
 
 Every mechanic in this laboratory maps directly onto one or both of your
 two case studies:
 
--   **Case 3 — GitHub, September 2012:** automated failover made an
-    outage worse, not better.
--   **Case 4 — Razorpay:** an RDS Multi-AZ failover was followed by
-    roughly five seconds of missing payment data.
+The lab prepares you for two incident-report case studies:
 
-The learning sequence is the same one you used in Module 1:
+- [GitHub](incident/03_distributed_failover_github2012.md): automated failover made an
+  outage worse, not better.
+- [Razorpay](incident/04_distributed_replication_razorpay.md): an RDS Multi-AZ failover was followed by
+  roughly five seconds of missing payment data.
+
+The learning sequence is:
 
 ``` text
 Lecture concept
@@ -53,39 +53,38 @@ Production incident
 Diagnosis and remediation
 ```
 
-The most important rule throughout this laboratory is unchanged from
-Module 1:
+The most important rule throughout this lab is:
 
-> **Do not report only what happened. Explain why it happened.**
+> **Do not report only what happened. Explain *why* it happened.**
 
 ------------------------------------------------------------------------
 
-# 2. Learning outcomes
+## 2. Learning outcomes
 
 By the end of this laboratory, you should be able to:
 
--   build and verify a streaming-replication PostgreSQL cluster;
--   distinguish asynchronous from synchronous replication by observing,
+- build and verify a streaming-replication PostgreSQL cluster;
+- distinguish asynchronous from synchronous replication by observing,
     not just describing, the difference;
--   explain `sync_state` values (`async`, `sync`, `quorum`, `potential`)
+- explain `sync_state` values (`async`, `sync`, `quorum`, `potential`)
     from direct evidence in `pg_stat_replication`;
--   apply the W + R > RF quorum rule to a real two-replica configuration
+- apply the W + R > RF quorum rule to a real two-replica configuration
     and predict, correctly, when a write will block;
--   perform a manual failover using `pg_promote()`;
--   explain, from a scenario you built yourself, what split-brain is and
+- perform a manual failover using `pg_promote()`;
+- explain, from a scenario you built yourself, what split-brain is and
     why an automated failover mechanism must guard against it;
--   distinguish "the client received a commit confirmation" from "the
+- distinguish "the client received a commit confirmation" from "the
     data is durable," using a live PostgreSQL cluster to demonstrate the
     difference precisely;
--   connect specific, named PostgreSQL mechanisms to specific moments in
+- connect specific, named PostgreSQL mechanisms to specific moments in
     both incident case studies;
--   use cluster evidence (`pg_stat_replication`, `pg_stat_activity`,
+- use cluster evidence (`pg_stat_replication`, `pg_stat_activity`,
     `wait_event`) to investigate a distributed-database incident, the
     same way you used `pg_locks` and `pg_stat_activity` in Module 1.
 
 ------------------------------------------------------------------------
 
-# 3. Important rules before starting
+## 3. Important rules before starting
 
 ### Rule 1 — Do not skip the observation questions
 
@@ -112,7 +111,7 @@ REPLICA 1 -> localhost:5442
 REPLICA 2 -> localhost:5443
 ```
 
-Running a command against the wrong node is the single most common
+Running a command against the wrong node is the most common
 source of confusion in this laboratory.
 
 ### Rule 4 — If the cluster ends up in a state you cannot make sense of
@@ -120,7 +119,9 @@ source of confusion in this laboratory.
 Run:
 
 ``` bash
-bash reset_lab.sh
+chmod u+x reset_lab.sh
+sed -i 's/\r$//' reset_lab.sh
+./reset_lab.sh
 ```
 
 This destroys all data and rebuilds a clean primary + two replicas. It
@@ -130,22 +131,22 @@ next part, or a reset, resolves.
 
 ------------------------------------------------------------------------
 
-# 4. Software requirements
+## 4. Software requirements
 
 You need:
 
--   Docker Desktop on Windows or macOS, or Docker Engine + Docker
+- Docker Desktop on Windows or macOS, or Docker Engine + Docker
     Compose on Linux;
--   a terminal, ideally able to open at least three tabs or panes at
+- a terminal, ideally able to open at least three tabs or panes at
     once;
--   Module 1 completed, or equivalent familiarity with `BEGIN`,
+- Module 1 completed, or equivalent familiarity with `BEGIN`,
     `COMMIT`, `ROLLBACK`, and `pg_stat_activity`.
 
 You **do not** need to install PostgreSQL directly on your computer.
 
 ------------------------------------------------------------------------
 
-# 5. Understanding the laboratory environment
+## 5. Understanding the laboratory environment
 
 ``` text
 Your computer
@@ -170,7 +171,7 @@ Your computer
 Each replica was built by taking a real base backup of the primary
 (`pg_basebackup`) and configuring it to continuously stream the
 primary's Write-Ahead Log (WAL) — the same mechanism you saw a single
-node write to itself in Module 1's WAL/crash-recovery material, now sent
+node write to itself in Module 1's WAL/crash-recovery theory material, now sent
 across the network to another node.
 
 The database contains one main table for the exercises, plus one you
@@ -178,10 +179,12 @@ will use to make split-brain and failover visible:
 
 ### `accounts`
 
-    account_id account_name     balance
-  ------------ -------------- ---------
-             1 Account A        1000.00
-             2 Account B        1000.00
+```text
+account_id   account_name     balance
+------------ -------------- ---------
+            1 Account A        1000.00
+            2 Account B        1000.00
+```
 
 ### `transaction_log`
 
@@ -198,14 +201,47 @@ writes?" Query it any time you are unsure:
 SELECT * FROM node_status;
 ```
 
+### A Shell
+A shell is **a command-line interpreter that provides a user interface for interacting with an Operating System.** Different shells offer different syntax, features, scripting capabilities, and user experiences.
+
+There are different types of shells. For example:
+
+- Bourne Shell (sh)
+- Bourne Again Shell (Bash)
+- C Shell (csh)
+- Korn Shell (ksh)
+- Z Shell (zsh)
+- Fish Shell (fish)
+- PowerShell
+
+We use `Git Bash` in our labs which is a terminal that runs on Windows and allow us to access the Bourne Again Shell (Bash).
+
+### Difference between a Terminal and a Shell
+
+- A terminal is a program that runs on your computer and allows you to interact with it via a command line interface (CLI).
+
+- The shell is the program that interprets the commands you type in the terminal.
+
+### Tutorials on Shell Scripting
+
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/bash/bash-original.svg" width="200" alt="Bash Logo"/>
+
+**Shell scripting** is the process of writing shell scripts that can be executed by the shell. It allows you to automate tasks, manage system operations, and perform various functions on your computer.
+
+It is an essential skill for **System Administrators**.
+
+The following site provides a tutorial on shell scripting: [https://www.tutorialspoint.com/unix/shell_scripting.htm](https://www.tutorialspoint.com/unix/shell_scripting.htm)
+
+This lab uses the `Bourne Again Shell` (Bash) as indicated at the top of each Shell script (each `.sh` file): `#!/bin/bash`. You can read more about Bash scripting here: [https://www.gnu.org/software/bash/](https://www.gnu.org/software/bash/)
+
 ------------------------------------------------------------------------
 
-# 6. SETUP
+## 6. SETUP
 
-## Step 1 — Open a terminal
+## Step 1 --- Open a terminal
 
 Open a terminal in the directory containing this laboratory's
-`docker-compose.yml`.
+`docker-compose.yaml`.
 
 Check Docker:
 
@@ -214,7 +250,7 @@ docker --version
 docker compose version
 ```
 
-## Step 2 — Check the Docker Compose configuration
+## Step 2 --- Check the Docker Compose configuration
 
 ``` bash
 docker compose config
@@ -224,7 +260,7 @@ docker compose config
 
 Docker Compose displays the resolved configuration with no error.
 
-## Step 3 — Start the cluster
+## Step 3 --- Start the cluster
 
 ``` bash
 docker compose up -d
@@ -261,7 +297,9 @@ Press `Ctrl+C` to stop following the logs once you see
 ## Step 4 — Verify with the automated check
 
 ``` bash
-bash verify_lab.sh
+chmod u+x verify_lab.sh
+sed -i 's/\r$//' verify_lab.sh
+./verify_lab.sh
 ```
 
 ### Expected result
@@ -902,7 +940,9 @@ This cluster cannot be safely un-split by hand — that is the point.
 Reset it:
 
 ``` bash
-bash reset_lab.sh
+chmod u+x reset_lab.sh
+sed -i 's/\r$//' reset_lab.sh
+./reset_lab.sh
 ```
 
 ------------------------------------------------------------------------
@@ -1208,7 +1248,9 @@ Look for the base backup step failing. Common cause: the primary was
 not yet healthy when the replica started trying to connect. Run:
 
 ``` bash
-bash reset_lab.sh
+chmod u+x reset_lab.sh
+sed -i 's/\r$//' reset_lab.sh
+./reset_lab.sh
 ```
 
 which waits for the primary before starting the replicas.
@@ -1243,14 +1285,16 @@ This is expected at least once in this laboratory, most likely after
 Part F.
 
 ``` bash
-bash reset_lab.sh
+chmod u+x reset_lab.sh
+sed -i 's/\r$//' reset_lab.sh
+./reset_lab.sh
 ```
 
 ## Problem 5 — Port 5441 / 5442 / 5443 is already in use
 
 Another application on your machine is using one of these ports. Ask
 your lecturer before changing the mapped host ports in
-`docker-compose.yml`; if you do change them, only change the **left**
+`docker-compose.yaml`; if you do change them, only change the **left**
 side of each `"HOST:5432"` mapping.
 
 ------------------------------------------------------------------------
@@ -1266,7 +1310,9 @@ docker compose down
 ## Option 2 — Full reset (used throughout this laboratory)
 
 ``` bash
-bash reset_lab.sh
+chmod u+x reset_lab.sh
+sed -i 's/\r$//' reset_lab.sh
+./reset_lab.sh
 ```
 
 ## Before you leave
@@ -1295,8 +1341,12 @@ docker compose stop pg-replica1
 docker compose start pg-replica1
 docker kill mod2_pg_primary
 docker compose down
-bash reset_lab.sh
-bash verify_lab.sh
+chmod u+x reset_lab.sh
+sed -i 's/\r$//' reset_lab.sh
+./reset_lab.sh
+chmod u+x verify_lab.sh
+sed -i 's/\r$//' verify_lab.sh
+./verify_lab.sh
 ```
 
 ## Connect

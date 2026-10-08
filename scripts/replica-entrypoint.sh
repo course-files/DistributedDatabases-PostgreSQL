@@ -12,9 +12,19 @@ set -euo pipefail
 PGDATA="/var/lib/postgresql/18/docker"
 REPLICA_NAME="${REPLICA_NAME:?REPLICA_NAME environment variable must be set}"
 
+# -s file is true if the file exists and has a size greater than zero.
+# The '!' reverses the result, so ! -s is true if the file is empty or does
+# not exist.
+# "$PGDATA/PG_VERSION" is the path to PostgreSQL’s version marker file. The
+# quotes keep the path together if it contains spaces.
+
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
     echo "[${REPLICA_NAME}] No existing data directory found. This is a first start."
     echo "[${REPLICA_NAME}] Waiting for pg-primary to accept connections..."
+
+    # -q makes pg_isready run quietly: it suppresses its normal status message.
+    # The loop still checks its exit status, retrying every second until
+    # pg-primary accepts connections.
 
     until pg_isready -h pg-primary -p 5432 -q; do
         sleep 1
@@ -35,13 +45,27 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
     # noticed and fixed it by hand. Dropping it first (only if it is not
     # currently in use by a genuinely in-progress backup) makes a retry
     # self-heal instead.
+
+    # -tAc is three psql options combined:
+    #   -t hides table headers and row-count footers.
+    #   -A prints results without table formatting.
+    #   -c runs the SQL command that follows.
+
+    # >/dev/null 2>&1 discards both normal output and error messages:
+    # > sends normal output to /dev/null, and 2>&1 sends errors to the same
+    # place.
+
+    # In short, the script quietly tries to remove the replica’s old, inactive
+    # replication slot. || true makes the script continue even if that cleanup
+    # command fails.
+    
     PGPASSWORD=ReplicatorPass123 psql -h pg-primary -p 5432 -U replicator -d postgres -tAc \
         "SELECT pg_drop_replication_slot('${REPLICA_NAME}_slot') FROM pg_replication_slots WHERE slot_name = '${REPLICA_NAME}_slot' AND NOT active;" \
         >/dev/null 2>&1 || true
 
     mkdir -p "$PGDATA"
     chown postgres:postgres "$PGDATA"
-    chmod 0700 "$PGDATA"
+    chmod 700 "$PGDATA"
 
     # -d   : a full libpq connection string, so we can set application_name
     #        here. This is the name PostgreSQL will match against
@@ -65,6 +89,11 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
     # failure would otherwise leave it stopped until a person noticed
     # and restarted it by hand.
     attempt=1
+
+    # -u postgres in `sudo -u postgres pg_basebackup ...` tells sudo to run the
+    # command as the postgres user. `gosu` is a separate utility often used in
+    # Docker containers for the same purpose; it is useful here because `sudo`
+    # may not be installed or configured in a normal Docker container.
     until gosu postgres pg_basebackup \
         -d "host=pg-primary port=5432 user=replicator password=ReplicatorPass123 application_name=${REPLICA_NAME}" \
         -D "$PGDATA" \
@@ -81,6 +110,16 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
         PGPASSWORD=ReplicatorPass123 psql -h pg-primary -p 5432 -U replicator -d postgres -tAc \
             "SELECT pg_drop_replication_slot('${REPLICA_NAME}_slot') FROM pg_replication_slots WHERE slot_name = '${REPLICA_NAME}_slot' AND NOT active;" \
             >/dev/null 2>&1 || true
+
+        # If `pg_basebackup` fails partway through, it may leave an incomplete
+        # backup inside `$PGDATA`. Before retrying, this command removes the
+        # directory’s contents so the next backup starts clean. It keeps the
+        # `$PGDATA` directory itself, which the script created earlier.
+
+        # The `:?` makes Bash stop with an error if `PGDATA` is unset or
+        # empty, helping prevent an accidental deletion from an invalid path.
+        # `rm -rf` removes files and subdirectories without prompting.
+
         rm -rf "${PGDATA:?}"/*
         attempt=$((attempt + 1))
         sleep 5

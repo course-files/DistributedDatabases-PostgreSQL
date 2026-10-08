@@ -234,6 +234,17 @@ The following site provides a tutorial on shell scripting: [https://www.tutorial
 
 This lab uses the `Bourne Again Shell` (Bash) as indicated at the top of each Shell script (each `.sh` file): `#!/bin/bash`. You can read more about Bash scripting here: [https://www.gnu.org/software/bash/](https://www.gnu.org/software/bash/)
 
+#### Explanation of Linux File System
+
+[![Linux File System Explained](./assets/images/linux_file_system_explained.png)](https://youtu.be/qvjRcZcW8CY)
+
+Link: [https://youtu.be/qvjRcZcW8CY](https://youtu.be/qvjRcZcW8CY)  
+Source: **Cloud X Berry**
+
+### Explanation of Linux File Permissions
+
+![chmod](https://raw.githubusercontent.com/course-files/classlab/refs/heads/main/assets/images/chmod.jpg)
+
 ------------------------------------------------------------------------
 
 ## 6. SETUP
@@ -283,7 +294,7 @@ already healthy before it even begins its own base backup. Two base
 backups running against the primary at the exact same instant compete
 for the same checkpoint and WAL-retention window, which can (rarely,
 but reproducibly) cause the primary to recycle a WAL segment one of
-the backups still needs. Serialising the two removes that race
+the backups still needs. Serializing the two removes that race
 entirely, at the cost of replica2 visibly starting later. This is
 expected, not a fault: watch it happen with:
 

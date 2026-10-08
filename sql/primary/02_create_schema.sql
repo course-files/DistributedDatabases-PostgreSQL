@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS transaction_log (
 );
 
 -- A convenience view so you can always ask "which node is this, and can it
--- currently accept writes?" without memorising the underlying function.
+-- currently accept writes?" without memorizing the underlying function.
 -- pg_is_in_recovery() returns true on a standby (replica) and false on a
 -- writable primary. Because this is a VIEW, it is created once on the
 -- primary and then ships to every replica automatically through normal

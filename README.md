@@ -49,7 +49,7 @@ PostgreSQL cluster.
 - When you run `pg_promote()` in the lab, PostgreSQL removes `standby.signal` and the node becomes a writable primary. This is why `standby.signal` is the switch between "replica" and "primary".
 - `pg_basebackup` only creates the replica's starting point. If the replica later falls too far behind, or the primary removes a WAL that the replica still needs, the replica cannot catch up by streaming alone.
 - In a case where the primary has removed a WAL record, you will get an error
-stating `requested WAL segment has already been removed`. The setup uses `wal_keep_size` to prevent the primary from removing WAL records that the replicas might still need.
+stating `requested WAL segment ... has already been removed`. The setup uses `wal_keep_size` to prevent the primary from removing WAL records that the replicas might still need.
 
 ## Setup Verification
 
@@ -65,7 +65,7 @@ not destroy data.
 
 ## Lab Manual
 
-[Link to lab manual](lab_manual.md)
+[Link to lab manual](distributed_databases.md)
 
 ## Clean Reset
 

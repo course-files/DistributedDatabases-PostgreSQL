@@ -1040,8 +1040,8 @@ docker compose logs pg-primary --tail=30
 
 Watch the log. You should see PostgreSQL detect it "was not properly
 shut down" and perform automatic crash recovery by replaying WAL — the
-exact mechanism from Module 1's recovery material, now triggered for
-real.
+exact mechanism from Module 1's recovery material, now actually
+triggered.
 
 ## Step G5 — Check whether the row survived
 

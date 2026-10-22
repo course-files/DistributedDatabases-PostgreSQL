@@ -1,0 +1,130 @@
+# =============================================================================
+# .gitattributes
+# Ensures consistent line endings and file handling for everyone,
+# regardless of operating system (Windows, Linux or macOS).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Default: detect text files automatically and use LF everywhere
+# -----------------------------------------------------------------------------
+# Git stores text files with LF in the repository and checks them out with LF
+# on every platform. Modern code editors (VS Code, Notepad, RStudio,
+# PyCharm) handle LF without any problem. Binary files are detected and left
+# untouched.
+* text=auto eol=lf
+
+# -----------------------------------------------------------------------------
+# 2. Files that MUST be LF (they break or misbehave with CRLF)
+# -----------------------------------------------------------------------------
+# `text` (rather than `text=auto`) forces Git to treat these as text even if
+# its automatic detection is unsure.
+
+# Shell scripts (run in Git Bash, Linux and macOS terminals)
+*.sh            text eol=lf
+*.bash          text eol=lf
+*.zsh           text eol=lf
+
+# Docker and container configuration (CRLF breaks line continuations and
+# can add hidden \r characters to environment variable values)
+Dockerfile      text eol=lf
+Dockerfile.*    text eol=lf
+*.dockerfile    text eol=lf
+.dockerignore   text eol=lf
+.env            text eol=lf
+*.env           text eol=lf
+.env.*          text eol=lf
+docker-compose*.yml  text eol=lf
+compose*.yml    text eol=lf
+
+# Build and configuration files
+Makefile        text eol=lf
+*.mk            text eol=lf
+*.conf          text eol=lf
+*.cfg           text eol=lf
+*.ini           text eol=lf
+*.properties    text eol=lf
+*.toml          text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+
+# Code that may be executed directly or piped into a container
+*.py            text eol=lf
+*.R             text eol=lf
+*.r             text eol=lf
+*.sql           text eol=lf
+*.js            text eol=lf
+*.ts            text eol=lf
+
+# Documents and notebooks
+*.md            text eol=lf
+*.qmd           text eol=lf
+*.Rmd           text eol=lf
+*.ipynb         text eol=lf
+*.json          text eol=lf
+*.csv           text eol=lf
+*.tsv           text eol=lf
+*.txt           text eol=lf
+
+# Git configuration files
+.gitattributes  text eol=lf
+.gitignore      text eol=lf
+
+# -----------------------------------------------------------------------------
+# 3. Windows-only scripts: These MUST be CRLF
+# -----------------------------------------------------------------------------
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+
+# -----------------------------------------------------------------------------
+# 4. Binary files: never convert line endings and never attempt text diffs
+# -----------------------------------------------------------------------------
+# Images
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.webp          binary
+*.bmp           binary
+
+# Documents
+*.pdf           binary
+*.docx          binary
+*.xlsx          binary
+*.xls           binary
+*.pptx          binary
+
+# Archives
+*.zip           binary
+*.gz            binary
+*.tar           binary
+*.7z            binary
+*.rar           binary
+
+# Data and model files (R, Python, databases)
+*.rds           binary
+*.RData         binary
+*.rda           binary
+*.parquet       binary
+*.feather       binary
+*.pkl           binary
+*.pickle        binary
+*.joblib        binary
+*.h5            binary
+*.hdf5          binary
+*.keras         binary
+*.onnx          binary
+*.pt            binary
+*.pth           binary
+*.db            binary
+*.sqlite        binary
+*.sqlite3       binary
+*.dump          binary
+*.backup        binary
+
+# Fonts
+*.ttf           binary
+*.otf           binary
+*.woff          binary
+*.woff2         binary
